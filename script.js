@@ -25,7 +25,7 @@ function analyzeEssay() {
     document.getElementById('total-score').textContent = totalScore;
     
     // Generate overall feedback
-    generateOverallFeedback([resultI, resultII, resultIII, resultIV], totalScore);
+    generateOverallFeedback([resultI, resultII, resultIII, resultIV], totalScore, essayText);
     
     // Show results section
     document.getElementById('results-section').style.display = 'block';
@@ -33,7 +33,42 @@ function analyzeEssay() {
 
 function updateCriterionUI(criterion, result) {
     document.getElementById(`score-${criterion}`).textContent = result.score;
-    document.getElementById(`feedback-${criterion}`).innerHTML = result.feedback;
+    
+    // Create detailed feedback with color coding
+    let feedbackHTML = '<div class="feedback-details">';
+    
+    // Strengths in green
+    if (result.strengths.length > 0) {
+        feedbackHTML += '<div class="strengths-section">';
+        feedbackHTML += '<strong>✅ Strengths:</strong><ul>';
+        result.strengths.forEach(strength => {
+            feedbackHTML += `<li class="strength-item">${strength}</li>`;
+        });
+        feedbackHTML += '</ul></div>';
+    }
+    
+    // Improvements in orange
+    if (result.improvements.length > 0) {
+        feedbackHTML += '<div class="improvements-section">';
+        feedbackHTML += '<strong>🔄 Areas for Improvement:</strong><ul>';
+        result.improvements.forEach(improvement => {
+            feedbackHTML += `<li class="improvement-item">${improvement}</li>`;
+        });
+        feedbackHTML += '</ul></div>';
+    }
+    
+    // Critical issues in red
+    if (result.criticalIssues.length > 0) {
+        feedbackHTML += '<div class="critical-section">';
+        feedbackHTML += '<strong>❌ Critical Issues:</strong><ul>';
+        result.criticalIssues.forEach(issue => {
+            feedbackHTML += `<li class="critical-item">${issue}</li>`;
+        });
+        feedbackHTML += '</ul></div>';
+    }
+    
+    feedbackHTML += '</div>';
+    document.getElementById(`feedback-${criterion}`).innerHTML = feedbackHTML;
     
     // Remove previous highlights
     for (let i = 1; i <= 4; i++) {
@@ -41,7 +76,7 @@ function updateCriterionUI(criterion, result) {
         if (element) element.classList.remove('highlight');
     }
     
-    // Determine which level to highlight based on score
+    // Determine which level to highlight based on score range
     let level;
     if (result.score >= 7) level = 4;
     else if (result.score >= 5) level = 3;
@@ -57,250 +92,395 @@ function updateCriterionUI(criterion, result) {
 function estimateCriterionI(essay) {
     const lowerEssay = essay.toLowerCase();
     let score = 0;
-    let feedback = [];
+    let strengths = [];
+    let improvements = [];
+    let criticalIssues = [];
     
-    // Check for required structure headings
-    const hasProblemSection = /problem.*section|section.*problem|^problem|heading.*problem/i.test(essay);
-    const hasSolutionSection = /solution.*section|section.*solution|^solution|heading.*solution/i.test(essay);
-    const hasRequiredStructure = hasProblemSection && hasSolutionSection;
+    // === HONG KONG CONTEXT ANALYSIS ===
+    const hasHongKongContext = /hong kong|hk|hongkong|special administrative region|sar/i.test(essay);
+    const hasEnergyProblem = /energy.*problem|energy.*issue|energy.*challenge|energy.*need|energy.*demand/i.test(lowerEssay);
+    const hasRenewableFocus = /renewable|solar|wind|hydro|tidal|geothermal|bioenergy|clean energy/i.test(lowerEssay);
+    const hasNonRenewableMention = /non.renewable|fossil|coal|natural gas|petroleum|unsustainable/i.test(lowerEssay);
     
-    // Check for problem statement
-    const problemKeywords = ['problem', 'issue', 'challenge', 'difficulty', 'concern'];
-    const hasProblemStatement = problemKeywords.some(keyword => lowerEssay.includes(keyword));
+    // === PROBLEM IDENTIFICATION ===
+    const problemKeywords = ['problem', 'issue', 'challenge', 'difficulty', 'concern', 'current situation', 'existing'];
+    const problemMentions = countOccurrences(lowerEssay, problemKeywords);
+    const hasProblemFocus = problemMentions >= 2;
     
-    // Check for science application description
-    const scienceKeywords = ['science', 'scientific', 'research', 'technology', 'method', 'experiment', 'study', 'data', 'evidence'];
-    const hasScienceApplication = scienceKeywords.some(keyword => lowerEssay.includes(keyword));
+    // === SOLUTION DESCRIPTION ===
+    const solutionKeywords = ['solution', 'proposal', 'recommendation', 'suggest', 'propose', 'implement'];
+    const solutionMentions = countOccurrences(lowerEssay, solutionKeywords);
+    const hasSolutionFocus = solutionMentions >= 2;
     
-    // Check for detail level and word count
+    // === SCIENTIFIC PRINCIPLES ===
+    const energyScienceKeywords = [
+        'energy transfer', 'energy conversion', 'electricity generation', 'power production',
+        'efficiency', 'photovoltaic', 'turbine', 'generator', 'conversion', 'storage',
+        'battery', 'kinetic', 'potential', 'thermal', 'electrical', 'mechanical'
+    ];
+    const scienceMentions = countOccurrences(lowerEssay, energyScienceKeywords);
+    const hasScienceFocus = scienceMentions >= 3;
+    
+    // === QUALITY INDICATORS ===
     const wordCount = essay.split(/\s+/).length;
-    const meetsWordRequirement = wordCount >= 550 && wordCount <= 650;
+    const meetsWordRequirement = wordCount >= 525 && wordCount <= 675; // 600 ± 75 words
+    const hasSpecificTechnology = /solar panel|wind turbine|hydroelectric|tidal generator|battery storage/i.test(lowerEssay);
+    const hasApplicationDetails = /applied.*hong kong|implement.*hk|hong kong.*context|local.*application/i.test(lowerEssay);
     
-    // Check for specific problem description
-    const hasSpecificProblem = /specific.*problem|particular.*issue|specific.*challenge/i.test(lowerEssay);
+    // Calculate weighted score
+    let weightedScore = 0;
     
-    // Check for clear scientific process description
-    const hasScientificProcess = /method.*used|scientific.*process|research.*conducted|experiment.*performed/i.test(lowerEssay);
+    // Base context points
+    if (hasHongKongContext) weightedScore += 2;
+    if (hasEnergyProblem) weightedScore += 1;
+    if (hasRenewableFocus) weightedScore += 1;
     
-    // STRICTER Scoring logic
-    if (hasRequiredStructure && hasProblemStatement && hasScienceApplication && hasSpecificProblem && hasScientificProcess && meetsWordRequirement) {
-        score = 8;
-        feedback.push("✓ Excellent structure with required headings");
-        feedback.push("✓ Clear, specific problem statement with detailed scientific application");
-        feedback.push("✓ Appropriate word count and comprehensive coverage");
-    } else if (hasRequiredStructure && hasProblemStatement && hasScienceApplication && hasSpecificProblem) {
-        score = 6;
-        feedback.push("✓ Good structure and problem identification");
-        if (!hasScientificProcess) feedback.push("↻ Need more detail about the scientific methods used");
-        if (!meetsWordRequirement) feedback.push(`↻ Word count (${wordCount}) should be around 600 words`);
-    } else if (hasProblemStatement && hasScienceApplication) {
-        score = 4;
-        feedback.push("✓ Basic problem and science application identified");
-        if (!hasRequiredStructure) feedback.push("✗ Missing required section headings (Problem, Solution)");
-        if (!hasSpecificProblem) feedback.push("↻ Problem statement needs to be more specific");
-        feedback.push(`↻ Word count: ${wordCount} (target: 600 words)`);
-    } else if (hasProblemStatement || hasScienceApplication) {
-        score = 2;
-        feedback.push("⚠ Only partially addresses the criterion");
-        if (!hasProblemStatement) feedback.push("✗ Missing clear problem statement");
-        if (!hasScienceApplication) feedback.push("✗ Missing description of scientific application");
-        if (!hasRequiredStructure) feedback.push("✗ Missing required structure headings");
+    // Content quality points
+    if (hasProblemFocus) weightedScore += 1;
+    if (hasSolutionFocus) weightedScore += 1;
+    if (hasScienceFocus) weightedScore += 1;
+    if (hasSpecificTechnology) weightedScore += 1;
+    if (hasApplicationDetails) weightedScore += 1;
+    if (meetsWordRequirement) weightedScore += 0.5;
+    if (hasNonRenewableMention) weightedScore += 0.5;
+    
+    // Convert to final score with sub-levels
+    if (weightedScore >= 6) {
+        score = weightedScore >= 7 ? 8 : 7;
+    } else if (weightedScore >= 4) {
+        score = weightedScore >= 5 ? 6 : 5;
+    } else if (weightedScore >= 2) {
+        score = weightedScore >= 3 ? 4 : 3;
+    } else if (weightedScore >= 0.5) {
+        score = weightedScore >= 1.5 ? 2 : 1;
     } else {
-        score = 1;
-        feedback.push("✗ No clear problem statement or scientific application identified");
-        feedback.push("• Use headings: Problem, Solution, Implications, Conclusion");
-        feedback.push("• Clearly state the specific problem being addressed");
-        feedback.push("• Describe how science is applied to solve this problem");
+        score = 0;
+    }
+    
+    // Generate detailed feedback
+    if (hasHongKongContext) {
+        strengths.push("Clear focus on Hong Kong's specific energy context");
+    } else {
+        criticalIssues.push("Missing specific reference to Hong Kong - this is essential for the task");
+    }
+    
+    if (hasEnergyProblem) {
+        strengths.push("Good identification of energy-related problems");
+    } else {
+        criticalIssues.push("Energy problem not clearly identified - focus on Hong Kong's energy needs");
+    }
+    
+    if (hasRenewableFocus) {
+        strengths.push("Appropriate focus on renewable energy solutions");
+    } else {
+        criticalIssues.push("Missing focus on renewable energy - this is the core requirement");
+    }
+    
+    if (hasProblemFocus) {
+        strengths.push("Clear problem statement and identification");
+    } else {
+        improvements.push("Strengthen the problem description with more specific details");
+    }
+    
+    if (hasSolutionFocus) {
+        strengths.push("Good explanation of proposed solution");
+    } else {
+        improvements.push("Make the solution proposal more explicit and detailed");
+    }
+    
+    if (hasScienceFocus) {
+        strengths.push("Good integration of energy science principles");
+    } else {
+        improvements.push("Include more scientific principles of energy transfer and conversion");
+    }
+    
+    if (hasSpecificTechnology) {
+        strengths.push("Specific renewable technology identified and described");
+    } else {
+        improvements.push("Name specific renewable energy technologies (solar, wind, hydro, etc.)");
+    }
+    
+    if (!meetsWordRequirement) {
+        criticalIssues.push(`Word count: ${wordCount} (Target: 600±75 words. You are ${wordCount < 525 ? 'under' : 'over'} by ${Math.abs(600 - wordCount)} words)`);
+    }
+    
+    if (!hasApplicationDetails) {
+        improvements.push("Explain how the solution specifically applies to Hong Kong's unique context");
     }
     
     return {
         score: score,
-        feedback: formatFeedback(feedback)
+        strengths: strengths,
+        improvements: improvements,
+        criticalIssues: criticalIssues
     };
 }
 
 function estimateCriterionII(essay) {
     const lowerEssay = essay.toLowerCase();
     let score = 0;
-    let feedback = [];
+    let strengths = [];
+    let improvements = [];
+    let criticalIssues = [];
     
-    // Check for required structure headings
-    const hasImplicationsSection = /implications.*section|section.*implications|^implications|heading.*implications/i.test(essay);
-    const hasConclusionSection = /conclusion.*section|section.*conclusion|^conclusion|heading.*conclusion/i.test(essay);
-    const hasRequiredStructure = hasImplicationsSection && hasConclusionSection;
-    
-    // Check for implications discussion
-    const implicationKeywords = ['implication', 'consequence', 'effect', 'impact', 'result', 'outcome', 'ramification'];
-    const hasImplications = implicationKeywords.some(keyword => lowerEssay.includes(keyword));
-    
-    // Check for specific factors
+    // === FACTORS ANALYSIS ===
     const factors = [
-        'moral', 'ethical', 'environment', 'social', 'society', 
-        'economic', 'economy', 'political', 'politics', 'cultural'
+        'moral', 'ethical', 'environment', 'social', 'economic', 'political', 
+        'cultural', 'society', 'economy', 'ecology', 'sustainability', 'health'
     ];
     const foundFactors = factors.filter(factor => lowerEssay.includes(factor));
-    const hasFactors = foundFactors.length > 0;
-    const hasMultipleFactors = foundFactors.length >= 2;
+    const factorCount = foundFactors.length;
+    const hasMultipleFactors = factorCount >= 3;
     
-    // Check for analysis (pros and cons)
-    const advantageKeywords = ['advantage', 'benefit', 'strength', 'positive', 'pro', 'opportunity'];
-    const disadvantageKeywords = ['disadvantage', 'drawback', 'limitation', 'negative', 'con', 'challenge', 'weakness'];
+    // === ADVANTAGES & DISADVANTAGES ===
+    const advantageKeywords = ['advantage', 'benefit', 'strength', 'positive', 'pro', 'opportunity', 'improvement'];
+    const disadvantageKeywords = ['disadvantage', 'drawback', 'limitation', 'negative', 'con', 'challenge', 'weakness', 'constraint'];
     
-    const hasAdvantages = advantageKeywords.some(keyword => lowerEssay.includes(keyword));
-    const hasDisadvantages = disadvantageKeywords.some(keyword => lowerEssay.includes(keyword));
-    const hasBothAdvantagesDisadvantages = hasAdvantages && hasDisadvantages;
+    const advantageMentions = countOccurrences(lowerEssay, advantageKeywords);
+    const disadvantageMentions = countOccurrences(lowerEssay, disadvantageKeywords);
+    const hasBalancedAnalysis = advantageMentions >= 2 && disadvantageMentions >= 2;
+    const hasOneSidedAnalysis = (advantageMentions >= 2 || disadvantageMentions >= 2) && !hasBalancedAnalysis;
     
-    // Check for analysis depth - stricter requirements
+    // === IMPLICATIONS DEPTH ===
+    const implicationKeywords = ['implication', 'consequence', 'effect', 'impact', 'result', 'outcome', 'ramification'];
+    const implicationMentions = countOccurrences(lowerEssay, implicationKeywords);
+    const hasImplicationsFocus = implicationMentions >= 2;
+    
+    // === FEASIBILITY ANALYSIS ===
+    const feasibilityKeywords = ['feasibility', 'viability', 'practical', 'realistic', 'implement', 'cost', 'infrastructure'];
+    const hasFeasibilityDiscussion = countOccurrences(lowerEssay, feasibilityKeywords) >= 2;
+    const hasHongKongFeasibility = /hong kong.*feasibility|feasibility.*hong kong|hk.*implement|practical.*hong kong/i.test(lowerEssay);
+    
+    // === CRITICAL THINKING ===
     const analysisKeywords = ['because', 'therefore', 'however', 'although', 'while', 'whereas', 'consequently', 'as a result'];
-    const hasAnalysisDepth = analysisKeywords.some(keyword => {
-        const sentences = lowerEssay.split(/[.!?]+/);
-        return sentences.some(sentence => 
-            sentence.includes(keyword) && sentence.length > 40
-        );
-    });
+    const analysisDepth = countOccurrences(lowerEssay, analysisKeywords);
+    const hasAnalyticalLanguage = analysisDepth >= 3;
     
-    // Check for critical thinking
-    const hasCriticalAnalysis = /limitation.*discuss|future.*research|improve.*method|better.*way/i.test(lowerEssay);
+    const hasCriticalEvaluation = /limitation.*discuss|future.*research|improve.*method|better.*way|recommendation|suggestion|alternative/i.test(lowerEssay);
     
-    // STRICTER Scoring logic
-    if (hasRequiredStructure && hasImplications && hasMultipleFactors && hasBothAdvantagesDisadvantages && hasAnalysisDepth && hasCriticalAnalysis) {
-        score = 8;
-        feedback.push("✓ Excellent analysis with multiple factors and critical thinking");
-        feedback.push(`✓ Discussed factors: ${foundFactors.join(', ')}`);
-        feedback.push("✓ Balanced discussion of advantages and disadvantages");
-        feedback.push("✓ Shows deep understanding of implications");
-    } else if (hasRequiredStructure && hasImplications && hasFactors && hasBothAdvantagesDisadvantages && hasAnalysisDepth) {
-        score = 6;
-        feedback.push("✓ Good analysis of implications");
-        feedback.push(`✓ Mentioned factors: ${foundFactors.join(', ')}`);
-        if (!hasMultipleFactors) feedback.push("↻ Discuss more than one factor (social, economic, environmental, etc.)");
-        if (!hasCriticalAnalysis) feedback.push("↻ Add critical analysis of limitations or future improvements");
-    } else if (hasImplications && hasFactors && (hasAdvantages || hasDisadvantages)) {
-        score = 4;
-        feedback.push("✓ Basic implications and factors identified");
-        feedback.push(`✓ Factors mentioned: ${foundFactors.join(', ')}`);
-        if (!hasRequiredStructure) feedback.push("✗ Missing required section headings (Implications, Conclusion)");
-        if (!hasBothAdvantagesDisadvantages) feedback.push("↻ Need to discuss both advantages AND disadvantages");
-        feedback.push("↻ Expand analytical depth with connecting words (therefore, however, because)");
-    } else if (hasImplications) {
-        score = 2;
-        feedback.push("⚠ Mentions implications but missing key elements");
-        if (!hasFactors) feedback.push("✗ No discussion of moral, ethical, social, economic, or political factors");
-        if (!hasRequiredStructure) feedback.push("✗ Missing required structure headings");
-        feedback.push("• Consider how your solution affects: society, environment, economy, etc.");
+    // Calculate weighted score
+    let weightedScore = 0;
+    
+    // Base points
+    if (hasImplicationsFocus) weightedScore += 1;
+    if (factorCount >= 2) weightedScore += 1;
+    
+    // Quality points
+    if (hasMultipleFactors) weightedScore += 1;
+    if (hasBalancedAnalysis) weightedScore += 2;
+    else if (hasOneSidedAnalysis) weightedScore += 1;
+    if (hasFeasibilityDiscussion) weightedScore += 1;
+    if (hasHongKongFeasibility) weightedScore += 1;
+    if (hasAnalyticalLanguage) weightedScore += 1;
+    if (hasCriticalEvaluation) weightedScore += 1;
+    
+    // Convert to final score with sub-levels
+    if (weightedScore >= 6) {
+        score = weightedScore >= 7 ? 8 : 7;
+    } else if (weightedScore >= 4) {
+        score = weightedScore >= 5 ? 6 : 5;
+    } else if (weightedScore >= 2) {
+        score = weightedScore >= 3 ? 4 : 3;
+    } else if (weightedScore >= 0.5) {
+        score = weightedScore >= 1.5 ? 2 : 1;
     } else {
-        score = 1;
-        feedback.push("✗ No meaningful discussion of implications found");
-        feedback.push("• Add Implications and Conclusion sections");
-        feedback.push("• Discuss the consequences of using science to solve this problem");
-        feedback.push("• Consider moral, ethical, social, economic, or political impacts");
+        score = 0;
+    }
+    
+    // Generate detailed feedback
+    if (hasImplicationsFocus) {
+        strengths.push("Good analysis of implications and consequences");
+    } else {
+        criticalIssues.push("Insufficient discussion of implications - analyze consequences thoroughly");
+    }
+    
+    if (factorCount > 0) {
+        strengths.push(`Discussed ${factorCount} factor(s): ${foundFactors.join(', ')}`);
+    } else {
+        criticalIssues.push("No factors (social, economic, environmental, etc.) discussed - this is required");
+    }
+    
+    if (hasMultipleFactors) {
+        strengths.push("Multiple factors considered, showing comprehensive understanding");
+    } else if (factorCount >= 1) {
+        improvements.push("Consider additional factors beyond current discussion");
+    }
+    
+    if (hasBalancedAnalysis) {
+        strengths.push("Excellent balanced analysis of both advantages and disadvantages");
+    } else if (hasOneSidedAnalysis) {
+        improvements.push("Analysis is one-sided - discuss both positive and negative aspects equally");
+    } else {
+        criticalIssues.push("No clear analysis of advantages or disadvantages - use 'pros/cons' or 'advantages/disadvantages'");
+    }
+    
+    if (hasFeasibilityDiscussion) {
+        strengths.push("Good discussion of feasibility and practical considerations");
+    } else {
+        improvements.push("Include more discussion of feasibility (cost, infrastructure, practicality)");
+    }
+    
+    if (hasHongKongFeasibility) {
+        strengths.push("Specific feasibility analysis for Hong Kong context");
+    } else {
+        improvements.push("Discuss how the solution is specifically feasible for Hong Kong");
+    }
+    
+    if (hasAnalyticalLanguage) {
+        strengths.push("Good use of analytical language to connect ideas");
+    } else {
+        improvements.push("Use more analytical language (therefore, however, because, consequently)");
+    }
+    
+    if (!hasCriticalEvaluation) {
+        improvements.push("Add critical evaluation of limitations or suggestions for improvement");
     }
     
     return {
         score: score,
-        feedback: formatFeedback(feedback)
+        strengths: strengths,
+        improvements: improvements,
+        criticalIssues: criticalIssues
     };
 }
 
 function estimateCriterionIII(essay) {
+    const lowerEssay = essay.toLowerCase();
     let score = 0;
-    let feedback = [];
+    let strengths = [];
+    let improvements = [];
+    let criticalIssues = [];
     
-    // Scientific terms list - more comprehensive
-    const scientificTerms = [
-        'hypothesis', 'theory', 'experiment', 'data', 'analysis', 'conclusion',
-        'methodology', 'variable', 'control', 'observation', 'evidence', 
-        'research', 'study', 'finding', 'result', 'procedure', 'sample',
-        'measurement', 'validity', 'reliability', 'conclusion', 'empirical',
-        'quantitative', 'qualitative', 'statistical', 'significant', 'correlation'
+    // === ENERGY SCIENCE TERMINOLOGY ===
+    const energyScienceTerms = [
+        'energy transfer', 'energy conversion', 'electricity generation', 'power production',
+        'efficiency', 'photovoltaic', 'turbine', 'generator', 'conversion', 'storage',
+        'battery', 'kinetic', 'potential', 'thermal', 'electrical', 'mechanical',
+        'renewable', 'sustainable', 'solar', 'wind', 'hydro', 'tidal', 'geothermal',
+        'carbon footprint', 'emissions', 'climate change', 'sustainability',
+        'voltage', 'current', 'power grid', 'infrastructure', 'capacity'
     ];
     
-    // Count scientific terms
-    const lowerEssay = essay.toLowerCase();
-    const foundTerms = scientificTerms.filter(term => lowerEssay.includes(term));
+    const foundTerms = energyScienceTerms.filter(term => lowerEssay.includes(term));
     const termCount = foundTerms.length;
-    const hasSubstantialTerminology = termCount >= 8;
-    const hasExcellentTerminology = termCount >= 12;
+    const uniqueTermCount = new Set(foundTerms).size;
+    const hasSubstantialTerminology = uniqueTermCount >= 8;
+    const hasBasicTerminology = uniqueTermCount >= 4;
     
-    // Check for definitions of terms
-    const definitionPatterns = /defined as|meaning|refers to|which is|is when|in other words/i;
-    const hasDefinitions = definitionPatterns.test(lowerEssay);
+    // === LANGUAGE QUALITY ===
+    const hasDefinitions = /defined as|meaning|refers to|which is|is when|in other words|that is/i.test(lowerEssay);
+    const hasTechnicalPrecision = /efficiency.*rate|conversion.*rate|capacity.*factor|energy.*density|specific.*cost/i.test(lowerEssay);
+    const hasContextUsage = /energy.*transfer|power.*generation|electricity.*production|renewable.*source/i.test(lowerEssay);
     
-    // Check for conciseness (no repeated ideas) - stricter
+    // === COMMUNICATION EFFECTIVENESS ===
     const sentences = essay.split(/[.!?]+/).filter(s => s.trim().length > 10);
     const uniqueSentences = [...new Set(sentences.map(s => s.trim().toLowerCase().replace(/\s+/g, ' ')))];
-    const repetitionRatio = uniqueSentences.length / sentences.length;
-    const isConcise = repetitionRatio > 0.85;
+    const repetitionRatio = uniqueSentences.length / Math.max(sentences.length, 1);
+    const isConcise = repetitionRatio > 0.8;
     
-    // Check for technical accuracy and precision
-    const hasTechnicalPrecision = /precisely|accurately|specifically|exactly|measured|calculated/i.test(lowerEssay);
+    const hasStructuredSections = /problem.*solution|solution.*implication|implication.*conclusion/i.test(lowerEssay);
+    const hasLogicalFlow = sentences.length > 20 && (sentences.filter(s => s.split(/\s+/).length > 15).length >= 5);
     
-    // Check for proper term usage in context
-    const hasContextUsage = /data shows|research indicates|studies demonstrate|evidence suggests/i.test(lowerEssay);
+    // Calculate weighted score
+    let weightedScore = 0;
     
-    // Check for font and formatting compliance (basic check)
-    const hasFormattingIssues = /font.*size|size.*font|times new roman|arial|calibri/i.test(lowerEssay);
+    // Terminology points
+    if (hasBasicTerminology) weightedScore += 1;
+    if (hasSubstantialTerminology) weightedScore += 2;
+    else if (uniqueTermCount >= 6) weightedScore += 1;
     
-    // STRICTER Scoring logic
-    if (hasExcellentTerminology && hasDefinitions && isConcise && hasTechnicalPrecision && hasContextUsage && !hasFormattingIssues) {
-        score = 8;
-        feedback.push("✓ Excellent use of scientific language throughout");
-        feedback.push(`✓ Used ${termCount} scientific terms correctly in context`);
-        feedback.push("✓ Key terms are defined and explained appropriately");
-        feedback.push("✓ Writing is concise, precise, and professionally formatted");
-    } else if (hasSubstantialTerminology && hasDefinitions && isConcise && hasContextUsage) {
-        score = 6;
-        feedback.push("✓ Good use of scientific language");
-        feedback.push(`✓ Used ${termCount} scientific terms: ${foundTerms.slice(0, 6).join(', ')}${foundTerms.length > 6 ? '...' : ''}`);
-        if (!hasTechnicalPrecision) feedback.push("↻ Use more precise technical language");
-        if (repetitionRatio <= 0.8) feedback.push("↻ Some repetition detected - improve conciseness");
-    } else if (termCount >= 4) {
-        score = 4;
-        feedback.push("✓ Basic scientific terminology used");
-        feedback.push(`✓ Found terms: ${foundTerms.join(', ')}`);
-        feedback.push("↻ Use more scientific language like: hypothesis, data analysis, empirical evidence");
-        if (!hasDefinitions) feedback.push("↻ Define unfamiliar scientific terms for clarity");
-        if (!hasContextUsage) feedback.push("↻ Use terms in proper scientific context");
-    } else if (termCount > 0) {
-        score = 2;
-        feedback.push("⚠ Very limited scientific language used");
-        feedback.push(`✓ Only found: ${foundTerms.join(', ')}`);
-        feedback.push("✗ Need to incorporate significantly more scientific vocabulary");
-        feedback.push("• Required terms: research, data, evidence, analysis, conclusion, methodology");
+    // Quality points
+    if (hasDefinitions) weightedScore += 1;
+    if (hasTechnicalPrecision) weightedScore += 1;
+    if (hasContextUsage) weightedScore += 1;
+    if (isConcise) weightedScore += 1;
+    if (hasStructuredSections) weightedScore += 1;
+    if (hasLogicalFlow) weightedScore += 0.5;
+    
+    // Convert to final score with sub-levels
+    if (weightedScore >= 6) {
+        score = weightedScore >= 7 ? 8 : 7;
+    } else if (weightedScore >= 4) {
+        score = weightedScore >= 5 ? 6 : 5;
+    } else if (weightedScore >= 2) {
+        score = weightedScore >= 3 ? 4 : 3;
+    } else if (weightedScore >= 0.5) {
+        score = weightedScore >= 1.5 ? 2 : 1;
     } else {
-        score = 1;
-        feedback.push("✗ No scientific language detected");
-        feedback.push("• Essential terms: hypothesis, experiment, data, analysis, evidence, research");
-        feedback.push("• Use precise scientific language throughout your essay");
+        score = 0;
+    }
+    
+    // Generate detailed feedback
+    if (hasSubstantialTerminology) {
+        strengths.push(`Excellent energy science vocabulary (${uniqueTermCount} different terms used)`);
+    } else if (hasBasicTerminology) {
+        strengths.push(`Good start with energy science terminology (${uniqueTermCount} terms)`);
+    } else {
+        criticalIssues.push(`Insufficient energy science terminology (only ${uniqueTermCount} terms used)`);
+    }
+    
+    if (hasDefinitions) {
+        strengths.push("Key energy terms are properly defined and explained");
+    } else {
+        improvements.push("Define important energy science terms for clarity");
+    }
+    
+    if (hasTechnicalPrecision) {
+        strengths.push("Uses precise technical energy terminology appropriately");
+    } else {
+        improvements.push("Use more precise energy terminology (efficiency rates, conversion rates, capacity)");
+    }
+    
+    if (hasContextUsage) {
+        strengths.push("Energy terms used in proper scientific context");
+    } else {
+        improvements.push("Use energy terms in proper context (energy transfer, power generation, etc.)");
+    }
+    
+    if (isConcise) {
+        strengths.push("Writing is concise with minimal repetition");
+    } else {
+        improvements.push("Reduce repetition and improve conciseness");
+    }
+    
+    if (!hasStructuredSections) {
+        improvements.push("Ensure clear logical flow between Problem → Solution → Implications → Conclusion");
+    }
+    
+    if (uniqueTermCount < 6) {
+        const missingTerms = energyScienceTerms.filter(term => !foundTerms.includes(term)).slice(0, 5);
+        improvements.push(`Consider using terms like: ${missingTerms.join(', ')}`);
     }
     
     return {
         score: score,
-        feedback: formatFeedback(feedback)
+        strengths: strengths,
+        improvements: improvements,
+        criticalIssues: criticalIssues
     };
 }
 
 function estimateCriterionIV(essay) {
     let score = 0;
-    let feedback = [];
+    let strengths = [];
+    let improvements = [];
+    let criticalIssues = [];
     
-    // Check for in-text citations - stricter
-    const hasInTextCitations = /\([^)]+\s\d{4}\)|\[\d+\]|author.*\d{4}|et al\.|\d{4}.*page|\d{4}.*p\./.test(essay);
-    const hasMultipleInTextCitations = (essay.match(/\([^)]+\s\d{4}\)|\[\d+\]/g) || []).length >= 3;
+    // Remove bibliography section for in-text citation analysis
+    const essayWithoutBibliography = essay.split(/references|works cited|bibliography/i)[0] || essay;
     
-    // Check for works cited/references section
+    // === IN-TEXT CITATION ANALYSIS ===
+    const inTextCitations = (essayWithoutBibliography.match(/\([^)]+\s\d{4}\)|\[\d+\]|author.*\d{4}|\d{4}.*page/g) || []);
+    const citationCount = inTextCitations.length;
+    const hasAdequateCitations = citationCount >= 3;
+    const hasMinimalCitations = citationCount >= 1;
+    
+    // === REFERENCE SECTION ===
     const hasReferences = /references|works cited|bibliography/i.test(essay);
-    
-    // Check for MLA format indicators - stricter
-    const hasMLA = /mla|modern language association/i.test(essay);
-    const hasMLAFormatting = /author.*title.*publisher|vol\.|pp\.|pages?\s\d|edited by|journal.*vol/i.test(essay);
-    
-    // Check for alphabetical order in references
     const lines = essay.split('\n');
     let referenceSection = false;
     let referenceCount = 0;
-    let hasAlphabeticalOrder = false;
-    let previousFirstLetter = '';
+    let hasMLAFormatting = false;
     
     for (let line of lines) {
         const lowerLine = line.toLowerCase();
@@ -311,161 +491,197 @@ function estimateCriterionIV(essay) {
         
         if (referenceSection && line.trim() && /[a-zA-Z]/.test(line)) {
             referenceCount++;
-            const firstLetter = line.trim().charAt(0).toLowerCase();
-            if (previousFirstLetter && firstLetter < previousFirstLetter) {
-                hasAlphabeticalOrder = false;
+            // Check MLA formatting
+            if (line.includes(',') && line.includes('.') && /\d{4}/.test(line)) {
+                hasMLAFormatting = true;
             }
-            previousFirstLetter = firstLetter;
         }
     }
     
-    hasAlphabeticalOrder = referenceCount > 1; // Simplified check
+    // === VISUAL ELEMENTS CITATION ===
+    const hasFigures = /figure|diagram|image|picture|table|chart/g.test(essay.toLowerCase());
+    const hasFigureCitations = /figure.*\d.*\(|diagram.*\d.*\(|image.*\d.*\(|source.*\d{4}|adapted from/i.test(essay);
     
-    // Check for picture/diagram citations
-    const hasFigureCitations = /figure\s*\d|table\s*\d|diagram\s*\d|image\s*\d/i.test(essay);
-    const hasProperFigureCitations = /figure\s*\d.*\(.*\d{4}\)|source.*\d{4}|adapted from.*\d{4}/i.test(essay);
+    // === COMPLETENESS CHECK ===
+    const hasCompleteDocumentation = hasAdequateCitations && referenceCount >= 4 && hasMLAFormatting;
+    const hasBasicDocumentation = hasMinimalCitations && hasReferences && referenceCount >= 2;
     
-    // Check for complete documentation
-    const hasCompleteDocumentation = hasMultipleInTextCitations && referenceCount >= 4 && hasMLAFormatting && hasAlphabeticalOrder;
+    // Calculate weighted score
+    let weightedScore = 0;
     
-    // STRICTER Scoring logic
-    if (hasCompleteDocumentation && hasProperFigureCitations) {
-        score = 8;
-        feedback.push("✓ Excellent documentation with proper MLA formatting throughout");
-        feedback.push(`✓ Found ${referenceCount} references with multiple in-text citations`);
-        feedback.push("✓ References in alphabetical order");
-        feedback.push("✓ All figures and tables properly cited");
-    } else if (hasMultipleInTextCitations && hasReferences && referenceCount >= 3 && hasMLAFormatting) {
-        score = 6;
-        feedback.push("✓ Good source documentation");
-        feedback.push(`✓ Found ${referenceCount} references with multiple in-text citations`);
-        if (!hasAlphabeticalOrder) feedback.push("↻ Arrange references in alphabetical order");
-        if (!hasProperFigureCitations) feedback.push("↻ Improve citation of images/diagrams");
-    } else if (hasInTextCitations && hasReferences && referenceCount >= 2) {
-        score = 4;
-        feedback.push("✓ Basic references and citations included");
-        feedback.push(`✓ Found ${referenceCount} reference(s) with some in-text citations`);
-        feedback.push("↻ Add more references (minimum 3-4 required)");
-        feedback.push("↻ Use consistent MLA format for all citations");
-        if (!hasMultipleInTextCitations) feedback.push("↻ Include in-text citations for all referenced works");
-    } else if (hasReferences) {
-        score = 2;
-        feedback.push("⚠ References section present but inadequate");
-        feedback.push(`↻ Only ${referenceCount} reference(s) - need minimum 3`);
-        if (!hasInTextCitations) feedback.push("✗ No in-text citations found");
-        feedback.push("• Use MLA format: Author. Title. Publisher, Year.");
+    // Base points
+    if (hasReferences) weightedScore += 1;
+    if (hasMinimalCitations) weightedScore += 1;
+    
+    // Quality points
+    if (hasAdequateCitations) weightedScore += 1;
+    if (referenceCount >= 3) weightedScore += 1;
+    if (referenceCount >= 4) weightedScore += 1;
+    if (hasMLAFormatting) weightedScore += 1;
+    if (hasFigureCitations) weightedScore += 1;
+    else if (hasFigures) weightedScore += 0.5;
+    
+    // Convert to final score with sub-levels
+    if (weightedScore >= 6) {
+        score = weightedScore >= 7 ? 8 : 7;
+    } else if (weightedScore >= 4) {
+        score = weightedScore >= 5 ? 6 : 5;
+    } else if (weightedScore >= 2) {
+        score = weightedScore >= 3 ? 4 : 3;
+    } else if (weightedScore >= 0.5) {
+        score = weightedScore >= 1.5 ? 2 : 1;
     } else {
-        score = 1;
-        feedback.push("✗ No proper references or citations detected");
-        feedback.push("• Add a 'References' or 'Works Cited' section with 3+ sources");
-        feedback.push("• Include in-text citations for all borrowed information");
-        feedback.push("• Use MLA format consistently");
+        score = 0;
+    }
+    
+    // Generate detailed feedback
+    if (hasReferences) {
+        strengths.push("References section is present");
+    } else {
+        criticalIssues.push("Missing references/works cited section");
+    }
+    
+    if (hasAdequateCitations) {
+        strengths.push(`Good use of in-text citations (${citationCount} citations)`);
+    } else if (hasMinimalCitations) {
+        improvements.push(`Limited in-text citations (${citationCount} - aim for 3+)`);
+    } else {
+        criticalIssues.push("No in-text citations found");
+    }
+    
+    if (referenceCount >= 3) {
+        strengths.push(`Adequate number of references (${referenceCount})`);
+    } else if (referenceCount > 0) {
+        improvements.push(`Insufficient references (${referenceCount} - need 3+)`);
+    } else {
+        criticalIssues.push("No references listed in references section");
+    }
+    
+    if (hasMLAFormatting) {
+        strengths.push("MLA formatting used correctly");
+    } else {
+        improvements.push("Improve MLA formatting (Author. Title. Publisher, Year.)");
+    }
+    
+    if (hasFigures && !hasFigureCitations) {
+        criticalIssues.push("Figures/diagrams are not properly cited");
+    } else if (hasFigureCitations) {
+        strengths.push("Visual elements are properly cited");
+    }
+    
+    if (citationCount < referenceCount) {
+        improvements.push("Some references are missing corresponding in-text citations");
     }
     
     return {
         score: score,
-        feedback: formatFeedback(feedback)
+        strengths: strengths,
+        improvements: improvements,
+        criticalIssues: criticalIssues
     };
 }
 
-function formatFeedback(feedbackArray) {
-    if (!feedbackArray || feedbackArray.length === 0) return '';
-    
-    let html = '<ul>';
-    feedbackArray.forEach(item => {
-        if (item.startsWith('✓')) {
-            html += `<li class="feedback-positive">${item}</li>`;
-        } else if (item.startsWith('✗') || item.startsWith('⚠')) {
-            html += `<li class="feedback-missing">${item}</li>`;
-        } else if (item.startsWith('↻')) {
-            html += `<li class="feedback-improvement">${item}</li>`;
-        } else {
-            html += `<li>${item}</li>`;
-        }
-    });
-    html += '</ul>';
-    return html;
+// Helper function to count occurrences of keywords
+function countOccurrences(text, keywords) {
+    return keywords.reduce((count, keyword) => {
+        const regex = new RegExp(`\\b${keyword}\\w*`, 'gi');
+        const matches = text.match(regex);
+        return count + (matches ? matches.length : 0);
+    }, 0);
 }
 
-function generateOverallFeedback(results, totalScore) {
+function generateOverallFeedback(results, totalScore, essayText) {
     const overallFeedback = document.getElementById('overall-feedback');
-    let html = '<h3>Overall Assessment</h3>';
+    let html = '<h3>📊 Overall Assessment - Hong Kong Renewable Energy Research</h3>';
     
     // Calculate grade based on strict boundaries
     const grade = calculateGrade(totalScore);
+    const wordCount = essayText.split(/\s+/).length;
     
     html += `<p><strong>Total Score: ${totalScore}/32</strong></p>`;
     html += `<p><strong>Estimated Grade: ${grade}/8</strong></p>`;
+    html += `<p><strong>Word Count: ${wordCount} words ${wordCount >= 525 && wordCount <= 675 ? '✅' : '❌'}</strong></p>`;
     
     // Grade interpretation
-    let gradeLevel = '';
-    if (grade >= 7) gradeLevel = 'Excellent - Meeting high expectations';
-    else if (grade >= 6) gradeLevel = 'Good - Solid understanding demonstrated';
-    else if (grade >= 5) gradeLevel = 'Satisfactory - Meets basic requirements';
-    else if (grade >= 4) gradeLevel = 'Limited - Needs significant improvement';
-    else if (grade >= 3) gradeLevel = 'Weak - Major issues present';
-    else if (grade >= 2) gradeLevel = 'Very Weak - Fundamental problems';
-    else if (grade >= 1) gradeLevel = 'Poor - Minimal requirements met';
-    else gradeLevel = 'Incomplete - Work not submitted or completely inadequate';
+    const gradeInfo = getGradeInfo(grade);
+    html += `<div class="grade-summary ${gradeInfo.class}">`;
+    html += `<p><strong>${gradeInfo.level}</strong> - ${gradeInfo.description}</p>`;
+    html += '</div>';
     
-    html += `<p><strong>Level: ${gradeLevel}</strong></p>`;
+    // Task-specific feedback
+    const hasHongKong = /hong kong|hk/i.test(essayText);
+    const hasRenewable = /renewable|solar|wind|hydro|tidal/i.test(essayText.toLowerCase());
+    const hasProsCons = /pros|cons|advantage|disadvantage/i.test(essayText.toLowerCase());
     
-    // Strengths (only if actually strong)
-    const strengths = results.filter(r => r.score >= 6);
-    if (strengths.length > 0) {
-        html += '<p><strong>Strengths:</strong></p><ul>';
-        strengths.forEach(result => {
-            const criterionName = getCriterionName(results.indexOf(result));
-            html += `<li class="feedback-positive">${criterionName} (${result.score}/8)</li>`;
+    html += '<div class="task-specific">';
+    html += '<h4>🎯 Task Requirements Check:</h4><ul>';
+    html += `<li class="${hasHongKong ? 'strength-item' : 'critical-item'}">${hasHongKong ? '✅ Hong Kong context addressed' : '❌ Missing Hong Kong focus'}</li>`;
+    html += `<li class="${hasRenewable ? 'strength-item' : 'critical-item'}">${hasRenewable ? '✅ Renewable energy solution proposed' : '❌ No renewable energy solution'}</li>`;
+    html += `<li class="${hasProsCons ? 'strength-item' : 'improvement-item'}">${hasProsCons ? '✅ Pros/cons analysis included' : '🔄 Need pros/cons analysis'}</li>`;
+    html += `<li class="${wordCount >= 525 && wordCount <= 675 ? 'strength-item' : 'critical-item'}">${wordCount >= 525 && wordCount <= 675 ? '✅ Word count appropriate' : '❌ Word count outside range (525-675)'}</li>`;
+    html += '</ul></div>';
+    
+    // Critical overall issues
+    const allCriticalIssues = results.flatMap(r => r.criticalIssues);
+    if (allCriticalIssues.length > 0) {
+        html += '<div class="critical-overall">';
+        html += '<h4>🚨 Priority Fixes Required:</h4><ul>';
+        allCriticalIssues.slice(0, 3).forEach(issue => {
+            html += `<li class="critical-item">${issue}</li>`;
         });
-        html += '</ul>';
+        html += '</ul></div>';
     }
     
-    // Areas for improvement (most will have these)
-    const improvements = results.filter(r => r.score < 6);
-    if (improvements.length > 0) {
-        html += '<p><strong>Priority Improvements:</strong></p><ul>';
-        improvements.forEach(result => {
-            const criterionName = getCriterionName(results.indexOf(result));
-            html += `<li class="feedback-improvement">${criterionName} (${result.score}/8) - Review specific feedback above</li>`;
+    // Key strengths
+    const allStrengths = results.flatMap(r => r.strengths);
+    if (allStrengths.length > 0) {
+        html += '<div class="strengths-overall">';
+        html += '<h4>✅ What You Did Well:</h4><ul>';
+        allStrengths.slice(0, 3).forEach(strength => {
+            html += `<li class="strength-item">${strength}</li>`;
         });
-        html += '</ul>';
+        html += '</ul></div>';
     }
     
-    // Critical issues
-    const criticalIssues = results.filter(r => r.score <= 2);
-    if (criticalIssues.length > 0) {
-        html += '<p><strong>Critical Issues Requiring Immediate Attention:</strong></p><ul>';
-        criticalIssues.forEach(result => {
-            const criterionName = getCriterionName(results.indexOf(result));
-            html += `<li class="feedback-missing">${criterionName} - Fundamental requirements not met</li>`;
-        });
-        html += '</ul>';
-    }
+    // Action plan
+    html += '<div class="action-plan">';
+    html += '<h4>🎯 Your Improvement Plan:</h4><ol>';
     
-    // Actionable next steps based on grade
-    html += '<p><strong>Action Steps:</strong></p><ul>';
-    if (grade <= 3) {
-        html += '<li class="feedback-missing">Review the assignment instructions and rubric carefully</li>';
-        html += '<li class="feedback-missing">Ensure you have all required sections: Problem, Solution, Implications, Conclusion</li>';
-        html += '<li class="feedback-missing">Add proper references and citations</li>';
-    } else if (grade <= 5) {
-        html += '<li class="feedback-improvement">Focus on improving analytical depth in Implications section</li>';
-        html += '<li class="feedback-improvement">Increase use of scientific terminology</li>';
-        html += '<li class="feedback-improvement">Ensure word count is around 600 words</li>';
+    if (grade <= 4) {
+        html += '<li class="critical-item"><strong>Hong Kong Focus:</strong> Ensure all analysis is specifically about Hong Kong</li>';
+        html += '<li class="critical-item"><strong>Renewable Solution:</strong> Propose a clear renewable energy technology</li>';
+        html += '<li class="improvement-item"><strong>Basic Structure:</strong> Follow Problem → Solution → Implications → Conclusion</li>';
+    } else if (grade <= 6) {
+        html += '<li class="improvement-item"><strong>Multiple Factors:</strong> Discuss 3+ factors (economic, social, environmental)</li>';
+        html += '<li class="improvement-item"><strong>Balanced Analysis:</strong> Equal discussion of advantages AND disadvantages</li>';
+        html += '<li class="improvement-item"><strong>Energy Science:</strong> Use more specific energy transfer terminology</li>';
     } else {
-        html += '<li class="feedback-positive">Refine analytical depth and critical thinking</li>';
-        html += '<li class="feedback-positive">Ensure all formatting requirements are met</li>';
-        html += '<li class="feedback-positive">Double-check MLA citation consistency</li>';
+        html += '<li class="strength-item"><strong>Refine Excellence:</strong> Enhance critical evaluation of limitations</li>';
+        html += '<li class="improvement-item"><strong>Hong Kong Specificity:</strong> Make feasibility analysis more Hong Kong-specific</li>';
+        html += '<li class="improvement-item"><strong>Technical Precision:</strong> Add specific efficiency rates and capacity data</li>';
     }
-    html += '<li>Use the highlighted rubric levels above as specific targets</li>';
-    html += '</ul>';
+    
+    html += '</ol></div>';
     
     overallFeedback.innerHTML = html;
 }
 
+function getGradeInfo(grade) {
+    const grades = {
+        8: { level: 'Excellent', description: 'Outstanding research paper exceeding all requirements', class: 'grade-excellent' },
+        7: { level: 'Very Good', description: 'High quality work with comprehensive Hong Kong analysis', class: 'grade-very-good' },
+        6: { level: 'Good', description: 'Solid research with minor areas for refinement', class: 'grade-good' },
+        5: { level: 'Satisfactory', description: 'Meets basic requirements adequately', class: 'grade-satisfactory' },
+        4: { level: 'Adequate', description: 'Limited demonstration of understanding', class: 'grade-adequate' },
+        3: { level: 'Basic', description: 'Fundamental requirements partially met', class: 'grade-basic' },
+        2: { level: 'Limited', description: 'Significant improvements needed', class: 'grade-limited' },
+        1: { level: 'Very Limited', description: 'Minimal requirements addressed', class: 'grade-very-limited' },
+        0: { level: 'Incomplete', description: 'Work not submitted or completely inadequate', class: 'grade-incomplete' }
+    };
+    return grades[grade] || grades[0];
+}
+
 function calculateGrade(totalScore) {
-    // Strict grade boundaries as specified
     if (totalScore >= 32) return 8;
     if (totalScore >= 28) return 7;
     if (totalScore >= 24) return 6;

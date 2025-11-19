@@ -177,3 +177,88 @@ button:hover {
     background-color: #f8d7da;
     border-color: #f5c6cb;
 }
+
+/* Add to existing CSS */
+.feedback-details {
+    margin: 10px 0;
+}
+
+.strengths-section, .improvements-section, .critical-section {
+    margin: 15px 0;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.strengths-section {
+    background-color: #f8fff8;
+    border-left: 4px solid #4CAF50;
+}
+
+.improvements-section {
+    background-color: #fffef0;
+    border-left: 4px solid #FF9800;
+}
+
+.critical-section {
+    background-color: #fff5f5;
+    border-left: 4px solid #f44336;
+}
+
+.strength-item {
+    color: #2e7d32;
+    list-style-type: '✅ ';
+}
+
+.improvement-item {
+    color: #ef6c00;
+    list-style-type: '🔄 ';
+}
+
+.critical-item {
+    color: #c62828;
+    list-style-type: '❌ ';
+}
+
+.grade-excellent { background-color: #e8f5e8; color: #2e7d32; padding: 10px; border-radius: 5px; }
+.grade-very-good { background-color: #f0f8ff; color: #1976d2; padding: 10px; border-radius: 5px; }
+.grade-good { background-color: #fff8e1; color: #f57c00; padding: 10px; border-radius: 5px; }
+.grade-satisfactory { background-color: #fff3e0; color: #ef6c00; padding: 10px; border-radius: 5px; }
+.grade-adequate { background-color: #ffebee; color: #d32f2f; padding: 10px; border-radius: 5px; }
+.grade-basic { background-color: #fce4ec; color: #c2185b; padding: 10px; border-radius: 5px; }
+.grade-limited { background-color: #f3e5f5; color: #7b1fa2; padding: 10px; border-radius: 5px; }
+.grade-very-limited { background-color: #e8eaf6; color: #303f9f; padding: 10px; border-radius: 5px; }
+.grade-incomplete { background-color: #ffebee; color: #b71c1c; padding: 10px; border-radius: 5px; }
+
+.critical-overall {
+    background-color: #ffebee;
+    border: 2px solid #f44336;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+
+.strengths-overall {
+    background-color: #f1f8e9;
+    border: 2px solid #4CAF50;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+
+.action-plan {
+    background-color: #e3f2fd;
+    border: 2px solid #2196F3;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+
+.action-plan ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.action-plan li {
+    margin: 8px 0;
+    padding: 5px;
+}
