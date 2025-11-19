@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y08 Science Criterion D Grade Estimator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Y08 Science Criterion D Grade Estimator</h1>
+        
+        <div class="input-section">
+            <h2>Paste Your Essay Below</h2>
+            <textarea id="essay-text" placeholder="Paste your essay here..."></textarea>
+            <button id="analyze-btn">Analyze Essay</button>
+        </div>
+        
+        <div class="results-section" id="results-section">
+            <h2>Estimated Grade & Feedback</h2>
+            
+            <div class="criterion" id="criterion-i">
+                <div class="criterion-title">Criterion i: Application of Science to Address a Problem</div>
+                <div class="score">Estimated Score: <span id="score-i">0</span>/8</div>
+                <div class="feedback" id="feedback-i"></div>
+                <table class="rubric-table">
+                    <tr>
+                        <th width="25%">1-2</th>
+                        <th width="25%">3-4</th>
+                        <th width="25%">5-6</th>
+                        <th width="25%">7-8</th>
+                    </tr>
+                    <tr>
+                        <td id="level-i-1">State the ways in which science is applied and used to address a specific problem or issue</td>
+                        <td id="level-i-2">Outline the ways in which science is applied and used to address a specific problem or issue</td>
+                        <td id="level-i-3">Summarise the ways in which science is applied and used to address a specific problem or issue</td>
+                        <td id="level-i-4">Describe the ways in which science is applied and used to address a specific problem or issue</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="criterion" id="criterion-ii">
+                <div class="criterion-title">Criterion ii: Implications of Using Science</div>
+                <div class="score">Estimated Score: <span id="score-ii">0</span>/8</div>
+                <div class="feedback" id="feedback-ii"></div>
+                <table class="rubric-table">
+                    <tr>
+                        <th width="25%">1-2</th>
+                        <th width="25%">3-4</th>
+                        <th width="25%">5-6</th>
+                        <th width="25%">7-8</th>
+                    </tr>
+                    <tr>
+                        <td id="level-ii-1">State the implications of using science and its application to solve a specific problem or issue</td>
+                        <td id="level-ii-2">Outline the implications of using science and its application to solve a specific problem or issue</td>
+                        <td id="level-ii-3">Describe the implications of using science and its application to solve a specific problem or issue</td>
+                        <td id="level-ii-4">Discuss and analyse the implications of using science and its application to solve a specific problem or issue</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="criterion" id="criterion-iii">
+                <div class="criterion-title">Criterion iii: Scientific Language</div>
+                <div class="score">Estimated Score: <span id="score-iii">0</span>/8</div>
+                <div class="feedback" id="feedback-iii"></div>
+                <table class="rubric-table">
+                    <tr>
+                        <th width="25%">1-2</th>
+                        <th width="25%">3-4</th>
+                        <th width="25%">5-6</th>
+                        <th width="25%">7-8</th>
+                    </tr>
+                    <tr>
+                        <td id="level-iii-1">Apply scientific language to communicate understanding but does so with limited success</td>
+                        <td id="level-iii-2">Sometimes apply scientific language to communicate understanding</td>
+                        <td id="level-iii-3">Usually apply scientific language to communicate understanding clearly and precisely</td>
+                        <td id="level-iii-4">Consistently apply scientific language to communicate understanding clearly and precisely</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="criterion" id="criterion-iv">
+                <div class="criterion-title">Criterion iv: Documentation of Sources</div>
+                <div class="score">Estimated Score: <span id="score-iv">0</span>/8</div>
+                <div class="feedback" id="feedback-iv"></div>
+                <table class="rubric-table">
+                    <tr>
+                        <th width="25%">1-2</th>
+                        <th width="25%">3-4</th>
+                        <th width="25%">5-6</th>
+                        <th width="25%">7-8</th>
+                    </tr>
+                    <tr>
+                        <td id="level-iv-1">Document sources, with limited success</td>
+                        <td id="level-iv-2">Sometimes document sources correctly</td>
+                        <td id="level-iv-3">Usually document sources correctly</td>
+                        <td id="level-iv-4">Document sources completely</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="total-score">
+                Total Estimated Score: <span id="total-score">0</span>/32
+            </div>
+            
+            <div class="overall-feedback" id="overall-feedback"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
